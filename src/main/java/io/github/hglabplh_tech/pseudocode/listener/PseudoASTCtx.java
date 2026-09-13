@@ -3,6 +3,7 @@ package io.github.hglabplh_tech.pseudocode.listener;
 import io.github.hglabplh_tech.PseudocodeParser;
 import org.antlr.v4.runtime.ParserRuleContext;
 
+import java.util.List;
 import java.util.Objects;
 
 public class PseudoASTCtx {
@@ -17,21 +18,12 @@ public class PseudoASTCtx {
         return this.actContext;
     }
 
-    PseudoAST addLeft(ParserRuleContext ruleCtx, boolean incrementNesting, BlockType blockType) {
+    PseudoAST addChild(ParserRuleContext ruleCtx, boolean incrementNesting, BlockType blockType) {
         PseudoAST save = this.actContext;
         Integer blockNesting = this.actContext.leaf().blockNesting();
         io.github.hglabplh_tech.pseudocode.listener.PseudoASTCtx.OpContext opCtx =
                 initializedBuilder(new OpContext(ruleCtx, blockNesting, blockType), blockType, incrementNesting).build();
-        this.actContext = PseudoAST.makeLeft(save, opCtx);
-        return save;
-    }
-
-    PseudoAST addRight(ParserRuleContext ruleCtx, boolean incrementNesting, BlockType blockType) {
-        PseudoAST save = this.actContext;
-        Integer blockNesting = this.actContext.leaf().blockNesting();
-        io.github.hglabplh_tech.pseudocode.listener.PseudoASTCtx.OpContext opCtx =
-                initializedBuilder(new OpContext(ruleCtx, blockNesting, blockType), blockType, incrementNesting).build();
-        this.actContext = PseudoAST.makeRight(save, opCtx);
+        this.actContext = PseudoAST.addChild(save, opCtx);
         return save;
     }
 
@@ -50,12 +42,13 @@ public class PseudoASTCtx {
                                      BlockType blockType, ParserRuleContext ruleCtx) {
         OpContext temp = this.getActOpContext().leaf();
         OpContext newCtx = initializedBuilder(temp, blockType, incrementNesting).pContext(ruleCtx).build();
-        return nodeLeaf.setInstanceDataBang(newCtx, nodeLeaf.root(), nodeLeaf.parent(), nodeLeaf.left(), nodeLeaf.right());
+        return nodeLeaf.setInstanceDataBang(newCtx, nodeLeaf.parent(), nodeLeaf.children());
     }
 
     enum BlockType {
         PROGRAM_BLOCK,
         COND_BLOCK,
+        SWITCH_CASE,
         LOOP_BLOCK,
         PROC_FUN_BLOCK,
         NONE;
@@ -146,12 +139,11 @@ public class PseudoASTCtx {
         private PseudoAST parent;
 
         /** the left child node */
-        private PseudoAST left;
+        private List<PseudoAST> children;
 
-        /* the right child node*/
-        private PseudoAST right;
 
-        public PseudoAST(OpContext leaf, PseudoAST parent, PseudoAST left, PseudoAST right) {
+
+        public PseudoAST(OpContext leaf, PseudoAST parent, List<PseudoAST> children) {
             this.leaf = leaf;
             this.parent = parent;
             if (parent == null) {
@@ -159,21 +151,20 @@ public class PseudoASTCtx {
             } else {
                 this.root = parent.root;
             }
-            this.left = left;
-            this.right = right;
+            this.children = children;
         }
 
-        public PseudoAST setInstanceDataBang(OpContext leaf, PseudoAST root, PseudoAST parent, PseudoAST left, PseudoAST right) {
+        public PseudoAST setInstanceDataBang(OpContext leaf, PseudoAST parent, List<PseudoAST> children) {
             this.leaf = leaf;
-            this.root = root;
+            this.root = getRootNode(null);
             this.parent = parent;
-            this.left = left;
-            this.right = right;
+            this.children = children;
+
             return this;
         }
 
         public static PseudoAST makeRoot(OpContext leaf) {
-            return new PseudoAST(leaf, null, null, null);
+            return new PseudoAST(leaf, null, null);
         }
 
         /**
@@ -182,19 +173,9 @@ public class PseudoASTCtx {
          * @param leaf the leaf
          * @return the left element
          */
-        public static PseudoAST makeRight(PseudoAST parent, OpContext leaf) {
-            return setRight(parent, new PseudoAST(leaf, parent, null, null));
+        public static PseudoAST addChild(PseudoAST parent, OpContext leaf) {
+            return addChild(parent, new PseudoAST(leaf, parent, null));
 
-        }
-
-        /**
-         * make a left leaf
-         * @param parent the parent node
-         * @param leaf the leaf
-         * @return the left element
-         */
-        public static PseudoAST makeLeft(PseudoAST parent, OpContext leaf) {
-            return setLeft(parent, new PseudoAST(leaf, parent, null, null));
         }
 
         /**
@@ -202,25 +183,12 @@ public class PseudoASTCtx {
          * - set the left reference
          * - private because set has not to be used by the user
          * @param parent the parent
-         * @param left the left leaf
+         * @param child the  child leaf/node
          * @return the left reference
          */
-        private static PseudoAST setLeft(PseudoAST parent, PseudoAST left) {
-            parent.left = left;
-            return parent.left;
-        }
-
-        /**
-         * set right
-         * - set the right reference
-         * - private because set has not to be used by the user
-         * @param parent the parent
-         * @param right the right leaf
-         * @return the right reference
-         */
-        private static PseudoAST setRight(PseudoAST parent, PseudoAST right) {
-            parent.right = right;
-            return parent.right;
+        private static PseudoAST addChild(PseudoAST parent, PseudoAST child) {
+            parent.children.add(child);
+            return child;
         }
 
         private static PseudoAST setParent(PseudoAST act, PseudoAST parent) {
@@ -266,17 +234,11 @@ public class PseudoASTCtx {
          * The left child getter
          * @return left child
          */
-        public PseudoAST left() {
-            return left;
+        public List<PseudoAST> children() {
+            return children;
         }
 
-        /**
-         * The right child getter
-         * @return right child
-         */
-        public PseudoAST right() {
-            return right;
-        }
+
     }
 
     public static ThreadLocal<PseudoAST> rootNode = new ThreadLocal<>();

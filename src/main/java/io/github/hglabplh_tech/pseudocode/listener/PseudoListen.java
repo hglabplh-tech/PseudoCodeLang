@@ -22,7 +22,7 @@ public class PseudoListen implements PseudocodeListener {
 
     @Override
     public void enterTopLevelItem(PseudocodeParser.TopLevelItemContext ctx) {
-        PseudoASTCtx.PseudoAST.makeLeft(this.root, new PseudoASTCtx.OpContext(ctx, 0, PseudoASTCtx.BlockType.NONE));
+        PseudoASTCtx.PseudoAST.addChild(this.root, new PseudoASTCtx.OpContext(ctx, 0, PseudoASTCtx.BlockType.NONE));
 
     }
 
