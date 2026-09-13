@@ -8,9 +8,11 @@ import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 public class PseudoListen implements PseudocodeListener {
+
+    private PseudoASTCtx.PseudoAST root = null;
     @Override
     public void enterProgram(PseudocodeParser.ProgramContext ctx) {
-
+        this.root = PseudoASTCtx.getRootNode(ctx);
     }
 
     @Override
@@ -20,6 +22,7 @@ public class PseudoListen implements PseudocodeListener {
 
     @Override
     public void enterTopLevelItem(PseudocodeParser.TopLevelItemContext ctx) {
+        PseudoASTCtx.PseudoAST.makeLeft(this.root, new PseudoASTCtx.OpContext(ctx, 0, PseudoASTCtx.BlockType.NONE));
 
     }
 
